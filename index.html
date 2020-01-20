@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>分片上传实现</title>
+</head>
+<body>
+    <input type="file" value="上传" onchange="handlerFileChange(event)" />
+
+    <button type="button" class="layui-btn layui-btn-normal">上传</button>
+
+    <script>
+        function handlerFileChange(e){
+            let files = e.target.files[0]
+            sliceChunkForUpload(files , 1)
+        }
+
+        /**
+         *
+         * @param file 上传处理的文件
+         * @param chunkSize 每个分片的大小 最小单位m
+         */
+        function sliceChunkForUpload(file , chunkSize = 1){
+            let uploadData = new FormData()
+            let fileSize = file.size
+            let fileName = file.name
+            let uploadChunkSize = chunkSize * 1024 * 1000
+            let uploadChunkNum = 1
+            let chunkStart = 0
+            let chunkEnd = uploadChunkSize
+
+            if(fileSize < chunkSize){
+                // 小于设定的数 直接上传
+            }else{
+                uploadChunkNum = Math.ceil(fileSize / uploadChunkSize)
+
+                let uploadChunk = null
+                for(let chunkI = 1;chunkI <= uploadChunkNum;chunkI++){
+                    uploadChunk = file.slice(chunkStart , chunkEnd)
+                    if(uploadChunk.size > 0){
+                        uploadData.set('chunk' , uploadChunk)
+                        uploadData.set('fileName' , fileName)
+                        uploadData.set('hash' , chunkI)
+                        chunkStart = chunkEnd + 1
+                        chunkEnd = uploadChunkSize * parseInt(chunkI + 1) + 1
+
+                        let uploadUrl = 'http://localhost:9006/file_upload'
+                        requestUploadChunk(uploadUrl , 'post' , uploadData)
+                    }
+                }
+
+            }
+        }
+
+        function requestUploadChunk(url , method , data , headers={}){
+
+            console.log(data)
+            return new Promise((resolve , reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open(method, url);
+                Object.keys(headers).forEach(key =>
+                    xhr.setRequestHeader(key, headers[key])
+                );
+                xhr.send(data);
+                xhr.onload = e => {
+                    resolve({
+                        data: e.target.response
+                    });
+                };
+            })
+        }
+
+
+    </script>
+</body>
+</html>
